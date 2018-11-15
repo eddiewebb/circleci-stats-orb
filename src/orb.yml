@@ -1,0 +1,79 @@
+version: 2.1
+description: "Allows CircleCI builds to access private network services over a intermediate jump host using SSH port forwarding."
+commands:
+  start_stats:
+    parameters:
+      stats_path:
+        description: the relative or absolute directory for stats reports.
+        default: circleci-stats
+        type: string
+    steps:
+      - run:
+          name: Start background stats
+          command: |
+            mkdir -p <<parameters.stats_path>>
+            ps -aorss | sed '1d'  | awk '{total += $1}END{size= total / 1024; printf "%.2f MB", size}' >> <<parameters.stats_path>>/memory.txt
+          background: true
+
+  expose_stats:
+    parameters:
+      stats_path:
+        description: the relative or absolute directory for stats reports.
+        default: circleci-stats
+        type: string
+    steps:
+      - run:
+          name: Print background stats
+          command: |
+            cat <<parameters.stats_path>>/*
+      - store_artifacts:
+          path: <<parameters.stats_path>>
+
+jobs:
+  with_stats:
+    parameters:
+      stats_path:
+        description: the relative or absolute directory for stats reports.
+        default: circleci-stats
+        type: string
+      executor:
+        description: the executor to use for job
+        default: default
+        type: executor
+      job_steps:
+        description: Map of steps to run while collecting stats
+        type: steps
+    executor: <<parameters.executor>>
+    steps:
+      - checkout
+      - start_stats:
+          stats_path: <<parameters.stats_path>>
+      - steps: <<parameters.job_steps>>
+      - expose_stats:
+          stats_path: <<parameters.stats_path>>
+
+
+executors:
+  default:
+    parameters:
+      docker_image:
+        description: the docker image to use for job
+        default: circleci/node:10
+        type: string
+    docker:
+      - image: <<parameters.docker_image>>
+
+examples:
+  providing_key_as_path:
+    description: Install stress and use memory
+    usage:
+      version: 2.1
+      orbs:
+        stats: eddiewebb/stats@volatile
+      workflows:
+        stress_stats:
+          jobs:
+            - stats/with_stats:
+                job_steps:
+                  - run: sudo apt-get update && sudo apt-get install -y stress
+                  - run: stress --vm 4 --timeout 30
