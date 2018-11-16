@@ -4,4 +4,4 @@ workflows:
       - stats/with_stats:
           job_steps:
             - run: sudo apt-get -y update && sudo apt-get -y install stress
-            - run: stress --vm 4 --timeout 30
+            - run: stress --vm 4 --timeout 5
