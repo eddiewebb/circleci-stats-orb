@@ -30,11 +30,8 @@ commands:
       - run:
           name: Stats Summary
           command: |
-            awk 'function bigger(val,max){if(val > max){return val}else{return max}}{hmem=bigger($3,hmem);hcpu=bigger($5,hcpu)}END{printf "Highest values:\nMemory:\t%.2f\nCPU:\t%.2f\n",hmem,hcpu}' <<parameters.stats_path>>/stats.txt
-      - run:
-          name: Print background stats
-          command: |
-            cat <<parameters.stats_path>>/*
+            awk 'function bigger(val,max){if(val > max){return val}else{return max}}{hmem=bigger($3,hmem);hcpu=bigger($5,hcpu)}END{printf "Highest values:\nMemory:\t%.2f MB\nCPU:\t%.2f %\n",hmem,hcpu}' <<parameters.stats_path>>/stats.txt
+            echo "See the <<parameters.stats_path>>/stats.txt (available as an artifact to this job) for full history with timestamps"
       - store_artifacts:
           path: <<parameters.stats_path>>
 
