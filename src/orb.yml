@@ -9,10 +9,15 @@ commands:
         type: string
     steps:
       - run:
+          name: Install/Confirm utilitis (gawk, )
+          command: |
+            # debian and ubuntu *(perhaps others) basic awk does not have functions we need insralling gawk replaces awk
+            sudo apt-get -y update && sudo apt-get -y install gawk || true  
+      - run:
           name: Start background stats
           command: |
             mkdir -p <<parameters.stats_path>>
-            ps -aorss | sed '1d'  | awk '{total += $1}END{size= total / 1024; printf "%.2f MB", size}' >> <<parameters.stats_path>>/memory.txt
+            while true;do sudo ps -Aorss,%cpu | sed '1d'  | awk '{mem += $1;cpu += $2}END{tmem = mem / 1024;tcpu = cpu / 1024; ts = strftime("%m/%d/%Y %H:%M:%S"); printf "%s %.2f MB, %.2f %\n", ts, tmem, tcpu}' >> <<parameters.stats_path>>/stats.txt;sleep 10; done
           background: true
 
   expose_stats:
@@ -22,6 +27,10 @@ commands:
         default: circleci-stats
         type: string
     steps:
+      - run:
+          name: Stats Summary
+          command: |
+            awk 'function bigger(val,max){if(val > max){return val}else{return max}}{hmem=bigger($3,hmem);hcpu=bigger($5,hcpu)}END{printf "Highest values:\nMemory:\t%.2f\nCPU:\t%.2f\n",hmem,hcpu}' <<parameters.stats_path>>/stats.txt
       - run:
           name: Print background stats
           command: |
@@ -75,5 +84,5 @@ examples:
           jobs:
             - stats/with_stats:
                 job_steps:
-                  - run: sudo apt-get update && sudo apt-get install -y stress
+                  - run: sudo apt-get update  && sudo apt-get -y install stress || true
                   - run: stress --vm 4 --timeout 30
