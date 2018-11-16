@@ -26,7 +26,7 @@ function setup {
   assert_jq_match '.jobs["stats/with_stats"].steps[0]' 'checkout'
   assert_jq_match '.jobs["stats/with_stats"].steps[2].run.background' 'true'
   assert_jq_match '.jobs["stats/with_stats"].steps[3].run.command' 'sudo apt-get -y update && sudo apt-get -y install stress'
-  assert_jq_match '.jobs["stats/with_stats"].steps[4].run.command' 'stress --vm 4 --timeout 30'
+  assert_jq_match '.jobs["stats/with_stats"].steps[4].run.command' 'stress --vm 4 --timeout 5'
 }
 
 
