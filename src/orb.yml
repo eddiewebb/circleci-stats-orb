@@ -32,8 +32,25 @@ commands:
           command: |
             awk 'function bigger(val,max){if(val > max){return val}else{return max}}{hmem=bigger($3,hmem);hcpu=bigger($5,hcpu)}END{printf "Highest values:\nMemory:\t%.2f MB\nCPU:\t%.2f %\n",hmem,hcpu}' <<parameters.stats_path>>/stats.txt
             echo "See the <<parameters.stats_path>>/stats.txt (available as an artifact to this job) for full history with timestamps"
+            
+   
       - store_artifacts:
           path: <<parameters.stats_path>>
+
+  credits_used:
+    parameters:
+      token:
+        description: Env var containing API token for private projects.
+        default: '${CIRCLECI_API_TOKEN}'
+        type: string
+    steps:   
+      - run:
+          name: Credit Consumption (Estimate)
+          command: |
+            curl -s "https://circleci.com/api/v1.1/project/github/${CIRCLE_PROJECT_USERNAME}/${CIRCLE_PROJECT_REPONAME}?limit=1&token=<<parameters.token>>" > /tmp/build-info.json 
+            CREDITS=$( jq '.[0].picard.resource_class.class as $size |.[0].start_time as $start |((now - ($start | split(".")[0] +"Z" | fromdate)) / 60) as $build_time |[{"size":"small","credits":5},{"size":"medium","credits":10},{"size":"medium+","credits":15},{"size":"large","credits":20},{"size":"xlarge","credits":40}] |  .[] | select(.size == $size ) |  .credits * $build_time | floor' /tmp/build-info.json )
+            echo "This build has used ${CREDITS} credits."
+            echo "NOTE: This is an **estimate** based on executor size and build time."
 
 jobs:
   with_stats:
@@ -46,6 +63,10 @@ jobs:
         description: the executor to use for job
         default: default
         type: executor
+      token:
+        description: Env var containing API token for private projects.
+        default: '${CIRCLECI_API_TOKEN}'
+        type: string
       job_steps:
         description: Map of steps to run while collecting stats
         type: steps
@@ -57,6 +78,8 @@ jobs:
       - steps: <<parameters.job_steps>>
       - expose_stats:
           stats_path: <<parameters.stats_path>>
+      - credits_used:
+          token: <<parameters.token>>
 
 
 executors:
